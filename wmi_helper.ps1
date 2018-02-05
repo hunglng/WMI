@@ -59,21 +59,21 @@
 
 
 Param (
-   [Parameter(Mandatory = $False)] 
-   [ValidateSet('Discovery', 'Get')]
-   [string]$Action,
-   [Parameter(Mandatory = $True)]
-   [String]$Namespace,
-   [Parameter(Mandatory = $True)]
-   [String]$Query,
-   [Parameter(Mandatory = $False)]
-   [String]$Idx,
-   [Parameter(Mandatory = $False)]
-   [String]$ErrorCode,
-   [Parameter(Mandatory = $False)]
-   [String]$ConsoleCP,
-   [Parameter(Mandatory = $False)]
-   [Switch]$DefaultConsoleWidth
+    [Parameter(Mandatory = $False)] 
+    [ValidateSet('Discovery', 'Get')]
+    [string]$Action,
+    [Parameter(Mandatory = $True)]
+    [String]$Namespace,
+    [Parameter(Mandatory = $True)]
+    [String]$Query,
+    [Parameter(Mandatory = $False)]
+    [String]$Idx,
+    [Parameter(Mandatory = $False)]
+    [String]$ErrorCode,
+    [Parameter(Mandatory = $False)]
+    [String]$ConsoleCP,
+    [Parameter(Mandatory = $False)]
+    [Switch]$DefaultConsoleWidth
 );
 
 #Set-StrictMode -Version Latest
@@ -93,139 +93,140 @@ Set-Variable -Option Constant -Name "CONSOLE_WIDTH" -Value 512
 #  Define names of params in class instances to be use its as LLD macros
 #
 Function Define-LLDMacros {
-   Param (
-      [Parameter(ValueFromPipeline = $True)] 
-      [PSObject]$InputObject
-   );
-   $Class = $InputObject[0].__CLASS;
-   # return array of parameter names, that will be used as LLD macros
-   Switch ($Class) {
-     #  'HP_DiskDrive' { @("DEVICEID", "NAME"); }
-     #  'HP_Processor' { @("DEVICEID", "NAME"); }
-     'HP_MemoryModule'         { @("NAME", "MANUFACTURER", "TAG"); }
-     # HP_EthernetPort is HP_WinEthernetPort class in real
-     'HP_WinEthernetPort'      { @("DEVICEID", "CAPTION", "PORTTYPE"); }
-     # HP_EthernetPort is HP_WinEthernetPort  class in real
-     'HP_WinNumericSensor '    { @("DEVICEID", "NAME", "UPPERTHRESHOLDCRITICAL", "NUMERICSENSORTYPE"); }
-     'HPSA_ArrayController'    { @("NAME", "ELEMENTNAME"); }
-      Default                  { @("DEVICEID", "NAME"); }
-   }  
+    Param (
+        [Parameter(ValueFromPipeline = $True)] 
+        [PSObject]$InputObject
+    );
+    $Class = $InputObject[0].__CLASS;
+    # return array of parameter names, that will be used as LLD macros
+    Switch ($Class) {
+        #  'HP_DiskDrive' { @("DEVICEID", "NAME"); }
+        #  'HP_Processor' { @("DEVICEID", "NAME"); }
+        'HP_MemoryModule' { @("NAME", "MANUFACTURER", "TAG"); }
+        # HP_EthernetPort is HP_WinEthernetPort class in real
+        'HP_WinEthernetPort' { @("DEVICEID", "CAPTION", "PORTTYPE"); }
+        # HP_EthernetPort is HP_WinEthernetPort  class in real
+        'HP_WinNumericSensor ' { @("DEVICEID", "NAME", "UPPERTHRESHOLDCRITICAL", "NUMERICSENSORTYPE"); }
+        'HPSA_ArrayController' { @("NAME", "ELEMENTNAME"); }
+        Default { @("DEVICEID", "NAME"); }
+    }  
 }
 
 #
 #  Prepare string to using with Zabbix 
 #
 Function PrepareTo-Zabbix {
-   Param (
-      [Parameter(ValueFromPipeline = $True)] 
-      [PSObject]$InputObject,
-      [String]$ErrorCode,
-      [Switch]$NoEscape,
-      [Switch]$JSONCompatible
-   );
-   Begin {
-      # Add here more symbols to escaping if you need
-      $EscapedSymbols = @('\', '"');
-      $UnixEpoch = Get-Date -Date "01/01/1970";
-   }
-   Process {
-      # Do something with all objects (non-pipelined input case)  
-      ForEach ($Object in $InputObject) { 
-         If ($Null -Eq $Object) {
-           # Put empty string or $ErrorCode to output  
-           If ($ErrorCode) { $ErrorCode } Else { "" }
-           Continue;
-         }
-         # Need add doublequote around string for other objects when JSON compatible output requested?
-         $DoQuote = $False;
-         Switch (($Object.GetType()).FullName) {
-            'System.Boolean'  { $Object = [int]$Object; }
-            'System.DateTime' { $Object = (New-TimeSpan -Start $UnixEpoch -End $Object).TotalSeconds; }
-            Default           { $DoQuote = $True; }
-         }
-         # Normalize String object
-         $Object = $( If ($JSONCompatible) { $Object.ToString().Trim() } else { Out-String -InputObject (Format-List -InputObject $Object -Property *)});
-
-         If (!$NoEscape) { 
-            ForEach ($Symbol in $EscapedSymbols) { 
-               $Object = $Object.Replace($Symbol, "\$Symbol");
+    Param (
+        [Parameter(ValueFromPipeline = $True)] 
+        [PSObject]$InputObject,
+        [String]$ErrorCode,
+        [Switch]$NoEscape,
+        [Switch]$JSONCompatible
+    );
+    Begin {
+        # Add here more symbols to escaping if you need
+        $EscapedSymbols = @('\', '"');
+        $UnixEpoch = Get-Date -Date "01/01/1970";
+    }
+    Process {
+        # Do something with all objects (non-pipelined input case)  
+        ForEach ($Object in $InputObject) { 
+            If ($Null -Eq $Object) {
+                # Put empty string or $ErrorCode to output  
+                If ($ErrorCode) { $ErrorCode } Else { "" }
+                Continue;
             }
-         }
+            # Need add doublequote around string for other objects when JSON compatible output requested?
+            $DoQuote = $False;
+            Switch (($Object.GetType()).FullName) {
+                'System.Boolean' { $Object = [int]$Object; }
+                'System.DateTime' { $Object = [int](New-TimeSpan -Start $UnixEpoch -End $Object).TotalSeconds; }
+                Default { $DoQuote = $True; }
+            }
+            # Normalize String object
+            $Object = $( If ($JSONCompatible) { $Object.ToString().Trim() } else { Out-String -InputObject (Format-List -InputObject $Object -Property *)});
 
-         # Doublequote object if adherence to JSON standart requested
-         If ($JSONCompatible -And $DoQuote) { 
-            "`"$Object`"";
-         } else {
-            $Object;
-         }
-      }
-   }
+            If (!$NoEscape) { 
+                ForEach ($Symbol in $EscapedSymbols) { 
+                    $Object = $Object.Replace($Symbol, "\$Symbol");
+                }
+            }
+
+            # Doublequote object if adherence to JSON standart requested
+            If ($JSONCompatible -And $DoQuote) { 
+                "`"$Object`"";
+            }
+            else {
+                $Object;
+            }
+        }
+    }
 }
 
 #
 #  Convert incoming object's content to UTF-8
 #
-Function ConvertTo-Encoding ([String]$From, [String]$To){  
-   Begin   {  
-      $encFrom = [System.Text.Encoding]::GetEncoding($from)  
-      $encTo = [System.Text.Encoding]::GetEncoding($to)  
-   }  
-   Process {  
-      $bytes = $encTo.GetBytes($_)  
-      $bytes = [System.Text.Encoding]::Convert($encFrom, $encTo, $bytes)  
-      $encTo.GetString($bytes)  
-   }  
+Function ConvertTo-Encoding ([String]$From, [String]$To) {  
+    Begin {  
+        $encFrom = [System.Text.Encoding]::GetEncoding($from)  
+        $encTo = [System.Text.Encoding]::GetEncoding($to)  
+    }  
+    Process {  
+        $bytes = $encTo.GetBytes($_)  
+        $bytes = [System.Text.Encoding]::Convert($encFrom, $encTo, $bytes)  
+        $encTo.GetString($bytes)  
+    }  
 }
 
 #
 #  Make & return JSON, due PoSh 2.0 haven't Covert-ToJSON
 #
 Function Make-JSON {
-   Param (
-      [Parameter(ValueFromPipeline = $True)] 
-      [PSObject]$InputObject, 
-      [array]$ObjectProperties, 
-      [Switch]$Pretty
-   ); 
-   Begin   {
-      [String]$Result = "";
-      # Pretty json contain spaces, tabs and new-lines
-      If ($Pretty) { $CRLF = "`n"; $Tab = "    "; $Space = " "; } Else { $CRLF = $Tab = $Space = ""; }
-      # Init JSON-string $InObject
-      $Result += "{$CRLF$Space`"data`":[$CRLF";
-      # Take each Item from $InObject, get Properties that equal $ObjectProperties items and make JSON from its
-      $itFirstObject = $True;
-   } 
-   Process {
-      # Do something with all objects (non-pipelined input case)  
-      ForEach ($Object in $InputObject) {
-         # Skip object when its $Null
-         If ($Null -Eq $Object) { Continue; }
+    Param (
+        [Parameter(ValueFromPipeline = $True)] 
+        [PSObject]$InputObject, 
+        [array]$ObjectProperties, 
+        [Switch]$Pretty
+    ); 
+    Begin {
+        [String]$Result = "";
+        # Pretty json contain spaces, tabs and new-lines
+        If ($Pretty) { $CRLF = "`n"; $Tab = "    "; $Space = " "; } Else { $CRLF = $Tab = $Space = ""; }
+        # Init JSON-string $InObject
+        $Result += "{$CRLF$Space`"data`":[$CRLF";
+        # Take each Item from $InObject, get Properties that equal $ObjectProperties items and make JSON from its
+        $itFirstObject = $True;
+    } 
+    Process {
+        # Do something with all objects (non-pipelined input case)  
+        ForEach ($Object in $InputObject) {
+            # Skip object when its $Null
+            If ($Null -Eq $Object) { Continue; }
 
-         If (-Not $itFirstObject) { $Result += ",$CRLF"; }
-         $itFirstObject=$False;
-         $Result += "$Tab$Tab{$Space"; 
-         $itFirstProperty = $True;
-         # Process properties. No comma printed after last item
-         ForEach ($Property in $ObjectProperties) {
-            If (-Not $itFirstProperty) { $Result += ",$Space" }
-            $itFirstProperty = $False;
-            $Result += "`"{#$Property}`":$(PrepareTo-Zabbix -InputObject $Object.$Property -JSONCompatible)";
-         }
-         # No comma printed after last string
-         $Result += "$Space}";
-      }
-   }
-   End {
-      # Finalize and return JSON
-      "$Result$CRLF$Tab]$CRLF}";
-   }
+            If (-Not $itFirstObject) { $Result += ",$CRLF"; }
+            $itFirstObject = $False;
+            $Result += "$Tab$Tab{$Space"; 
+            $itFirstProperty = $True;
+            # Process properties. No comma printed after last item
+            ForEach ($Property in $ObjectProperties) {
+                If (-Not $itFirstProperty) { $Result += ",$Space" }
+                $itFirstProperty = $False;
+                $Result += "`"{#$Property}`":$(PrepareTo-Zabbix -InputObject $Object.$Property -JSONCompatible)";
+            }
+            # No comma printed after last string
+            $Result += "$Space}";
+        }
+    }
+    End {
+        # Finalize and return JSON
+        "$Result$CRLF$Tab]$CRLF}";
+    }
 }
 
 $Result = 0;
 If ([string]::IsNullOrEmpty($Query)) { 
-   Write-Verbose "$(Get-Date) No query given";
-   exit; 
+    Write-Verbose "$(Get-Date) No query given";
+    exit; 
 }
 
 #If ([string]::IsNullOrEmpty($NameSpace)) { $NameSpace = "ROOT\HPQ"; }
@@ -243,43 +244,63 @@ $Objects = Get-WmiObject -Computer "." -Query $Query -NameSpace $NameSpace;
 
 Write-Verbose "$(Get-Date) Object(s) fetched, begin processing its with action: '$Action'";
 $Result = $(
-   # if no object in collection: 1) JSON must be empty; 2) 'Get' must be able to return ErrorCode
-   Switch ($Action) {
-      'Discovery' {
-         # Discovery given object, make json for zabbix
-         Write-Verbose "$(Get-Date) Class of object(s) is '$($Objects[0].__CLASS)'";
-         $ObjectProperties = Define-LLDMacros -InputObject $Objects;
-         Write-Verbose "$(Get-Date) Generating LLD JSON";
-         Make-JSON -InputObject $Objects -ObjectProperties $ObjectProperties -Pretty;
-      }
-      'Get' {
-         # Select value if single metric or array's item
-         If ($Null -ne $Objects) { 
-            Write-Verbose "$(Get-Date) Select value of single object or array item that selected by WMI query";
-            $Objects = $( If (1 -lt $Objects.Length) {
-                             $Objects;
-                          } ElseIf ($($Objects.Properties).IsArray) {
-                             $($Objects.Properties).Value[$Idx];
-                          } else {
-                             $($Objects.Properties).Value;
-                         }
-            );
-         }
-         PrepareTo-Zabbix -InputObject $Objects -ErrorCode $ErrorCode;
-      }
-   }
+    # if no object in collection: 1) JSON must be empty; 2) 'Get' must be able to return ErrorCode
+    Switch ($Action) {
+        'Discovery' {
+            # Discovery given object, make json for zabbix
+            Write-Verbose "$(Get-Date) Class of object(s) is '$($Objects[0].__CLASS)'";
+            $ObjectProperties = Define-LLDMacros -InputObject $Objects;
+            Write-Verbose "$(Get-Date) Generating LLD JSON";
+            Make-JSON -InputObject $Objects -ObjectProperties $ObjectProperties -Pretty;
+        }
+        'Get' {
+            # Select value if single metric or array's item
+            If ($Null -ne $Objects) { 
+                Write-Verbose "$(Get-Date) Select value of single object or array item that selected by WMI query";
+                # $Objects = $( If (1 -lt $Objects.Length) {
+                #                  $Objects;
+                #               } ElseIf ($($Objects.Properties).IsArray) {
+                #                  $($Objects.Properties).Value[$Idx];
+                #               } else {
+                #                  $($Objects.Properties).Value;
+                #              }
+                # );
+                $Objects = $( If (1 -lt $Objects.Length) {
+                        If ($($Objects[$Idx].Properties).IsArray) {
+                            $($Objects[$Idx].Properties).Value[$Idx];
+                        }
+                        else {
+                            $($Objects[$Idx].Properties).Value;
+                        }
+                    }
+                    ElseIf ($($Objects.Properties).IsArray) {
+                        $($Objects.Properties).Value[$Idx];
+                    }
+                    else {
+                        If ($Objects.Properties.Type -eq "DateTime") {
+                            [Management.ManagementDateTimeConverter]::ToDateTime($($Objects.Properties).Value)
+                        }
+                        else {
+                            $($Objects.Properties).Value;
+                        }
+                    }
+                );
+            }
+            PrepareTo-Zabbix -InputObject $Objects -ErrorCode $ErrorCode;
+        }
+    }
 );
 
 # Convert string to UTF-8 if need (For Zabbix LLD-JSON with Cyrillic chars for example)
 if ($consoleCP) { 
-   Write-Verbose "$(Get-Date) Converting output data to UTF-8";
-   $Result = $Result | ConvertTo-Encoding -From $consoleCP -To UTF-8; 
+    Write-Verbose "$(Get-Date) Converting output data to UTF-8";
+    $Result = $Result | ConvertTo-Encoding -From $consoleCP -To UTF-8; 
 }
 
 # Break lines on console output fix - increase console width to $CONSOLE_WIDTH chars
 if (!$defaultConsoleWidth) { 
-   Write-Verbose "$(Get-Date) Changing console width to $CONSOLE_WIDTH";
-   mode con cols=$CONSOLE_WIDTH; 
+    Write-Verbose "$(Get-Date) Changing console width to $CONSOLE_WIDTH";
+    mode con cols=$CONSOLE_WIDTH; 
 }
 
 Write-Verbose "$(Get-Date) Finishing";
