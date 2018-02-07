@@ -14,8 +14,9 @@
         DateCreated: 
         Testing environment: HP DL360e, Windows Server 2008R2 SP1, Powershell 2.0;
                              HP DL360p, Windows Server 2012 R2, PowerShell 4.
+							 
     .FOLK
-        Version: 0.10.0
+        Version: 0.10.1
 
     .LINK  
         https://github.com/zbx-sadman
