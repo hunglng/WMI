@@ -288,6 +288,11 @@ $Result = $(
             }
             PrepareTo-Zabbix -InputObject $Objects -ErrorCode $ErrorCode;
         }
+		'Update' {
+			$output = ".\wmi_helper.ps1"
+
+			Invoke-WebRequest -Uri $Query -OutFile $output
+		}
     }
 );
 
