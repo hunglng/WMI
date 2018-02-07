@@ -60,7 +60,7 @@
 
 Param (
     [Parameter(Mandatory = $False)] 
-    [ValidateSet('Discovery', 'Get')]
+    [ValidateSet('Discovery', 'Get', 'Update')]
     [string]$Action,
     [Parameter(Mandatory = $True)]
     [String]$Namespace,
