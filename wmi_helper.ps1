@@ -240,7 +240,7 @@ Write-Verbose "$(Get-Date) Taking instances...";
 
 # Prepare object lists
 
-$Objects = Get-WmiObject -Computer "." -Query $Query -NameSpace $NameSpace;
+If ($Action -ne 'Update') { $Objects = Get-WmiObject -Computer "." -Query $Query -NameSpace $NameSpace; }
 #$Objects | fl *
 #exit
 
