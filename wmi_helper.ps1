@@ -292,9 +292,13 @@ $Result = $(
             PrepareTo-Zabbix -InputObject $Objects -ErrorCode $ErrorCode;
         }
 		'Update' {
-			$output = ".\wmi_helper.ps1"
+			$output = "C:\zabbixagent\scripts\wmi_helper.ps1"
 
-			Invoke-WebRequest -Uri $Query -OutFile $output
+            $res = Invoke-WebRequest -Uri $Query -UseBasicParsing
+
+            $res.Content | Out-File -FilePath $output
+
+            Start-Sleep -s 15
 		}
     }
 );
